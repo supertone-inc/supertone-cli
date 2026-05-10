@@ -8,8 +8,8 @@ Tracking known bugs in the `supertone` SDK that require workarounds in `superton
 
 - **SDK Version**: supertone==0.2.0
 - **Observed**: 2026-04-03
-- **Status**: Open (workaround in place)
-- **Tracker**: ISSUE-024
+- **Status**: Resolved in supertone==0.2.1 (2026-05-10) — workaround removed in ISSUE-028
+- **Tracker**: ISSUE-024 (resolved by ISSUE-028)
 
 ### Description
 
@@ -28,20 +28,10 @@ client = Supertone(api_key="<valid_key>")
 voices = client.custom_voices.list_custom_voices()
 ```
 
-### Workaround
+### Workaround (historical)
 
-`supertone-cli` bypasses the SDK and calls the REST API directly via `httpx`:
-
-```python
-import httpx
-resp = httpx.get(
-    f"{base_url}/v1/custom-voices",
-    headers={"x-sup-api-key": api_key},
-)
-```
-
-See `src/supertone_cli/client.py:list_custom_voices()` — marked with `WORKAROUND(ISSUE-024)`.
+`supertone-cli` previously bypassed the SDK and called the REST API directly via `httpx` in `src/supertone_cli/client.py:list_custom_voices()`. This was removed in ISSUE-028 once the upstream fix landed.
 
 ### Resolution
 
-Remove the workaround when the upstream SDK ships a fix (expected in supertone > 0.2.x). The fix should either make the `description` field optional in the Pydantic model or ensure the API always returns it.
+`supertone==0.2.1` ships a Pydantic model where `description` is `OptionalNullable[str] = UNSET` in `supertone/models/getcustomvoiceresponse.py`. ISSUE-028 reverted `list_custom_voices` to the SDK call and pinned `supertone>=0.2.1` in `pyproject.toml`.

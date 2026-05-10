@@ -107,7 +107,9 @@ def get_client() -> Any:
 
     key = get_api_key()
     if not key:
-        raise AuthError("API key not configured. Run: supertone config set api_key <key>")
+        raise AuthError(
+            "API key not configured. Run: supertone config set api_key <key>"
+        )
 
     # Lazy import -- SDK loaded only when needed (startup perf).
     from supertone import Supertone
@@ -142,7 +144,9 @@ def _get_model_enum(model: str) -> Any:
     if model not in mapping:
         from supertone_cli.errors import InputError
 
-        raise InputError(f"Unsupported model: {model}. Valid: {', '.join(sorted(mapping.keys()))}")
+        raise InputError(
+            f"Unsupported model: {model}. Valid: {', '.join(sorted(mapping.keys()))}"
+        )
     return mapping[model]
 
 
@@ -156,7 +160,9 @@ def _get_format_enum(fmt: str) -> Any:
     if fmt not in mapping:
         from supertone_cli.errors import InputError
 
-        raise InputError(f"Unsupported format: {fmt}. Valid: {', '.join(sorted(mapping.keys()))}")
+        raise InputError(
+            f"Unsupported format: {fmt}. Valid: {', '.join(sorted(mapping.keys()))}"
+        )
     return mapping[fmt]
 
 
@@ -314,38 +320,13 @@ def list_voices() -> list[Voice]:
         raise APIError(str(exc)) from exc
 
 
-# WORKAROUND(ISSUE-024): The supertone SDK (v0.2.0) Pydantic model for custom
-# voice responses requires a 'description' field that the live API does not
-# return, causing a ValidationError. We bypass the SDK and call the REST API
-# directly via httpx. This workaround should be removed when upstream ships a
-# fix (supertone > 0.2.x). See: docs/upstream_bugs.md
 def list_custom_voices() -> list[Voice]:
-    """List custom (cloned) voices via raw HTTP.
-
-    SDK has a validation bug (requires 'description' field
-    but API doesn't return it), so we use raw HTTP.
-    """
+    """List custom (cloned) voices."""
     client = get_client()
     try:
-        import httpx
-
-        base = client.sdk_configuration.get_server_details()[0]
-        key = get_api_key() or ""
-        resp = httpx.get(
-            f"{base}/v1/custom-voices",
-            headers={"x-sup-api-key": key},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        items = data.get("items", [])
-        return [
-            Voice(
-                id=v.get("voice_id", ""),
-                name=v.get("name", ""),
-                type="custom",
-            )
-            for v in items
-        ]
+        response = client.custom_voices.list_custom_voices()
+        items = _attr(response, "items", [])
+        return [_build_voice(v, voice_type="custom") for v in items]
     except (AuthError, APIError):
         raise
     except Exception as exc:

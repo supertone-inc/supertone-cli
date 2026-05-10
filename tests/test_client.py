@@ -374,29 +374,38 @@ def test_get_voice_usage_returns_list():
         assert results[0]["minutes_used"] == 3.2
 
 
-def test_list_custom_voices_via_httpx():
+def test_list_custom_voices_via_sdk():
+    """list_custom_voices uses the SDK directly (no httpx workaround)."""
     from supertone_cli.client import list_custom_voices
     from supertone_cli.models import Voice
 
     mock_client = MagicMock()
-    mock_client.sdk_configuration.get_server_details.return_value = [
-        "https://api.supertone.ai"
-    ]
+    mock_voice = MagicMock(spec=["voice_id", "name"])
+    mock_voice.voice_id = "c1"
+    mock_voice.name = "Custom1"
+    mock_response = MagicMock()
+    mock_response.items = [mock_voice]
+    mock_client.custom_voices.list_custom_voices.return_value = mock_response
 
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = {"items": [{"voice_id": "c1", "name": "Custom1"}]}
-    mock_resp.raise_for_status = MagicMock()
-
-    with (
-        patch("supertone_cli.client.get_client", return_value=mock_client),
-        patch("supertone_cli.client.get_api_key", return_value="sk-test"),
-        patch("httpx.get", return_value=mock_resp),
-    ):
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
         voices = list_custom_voices()
         assert len(voices) == 1
         assert isinstance(voices[0], Voice)
         assert voices[0].id == "c1"
+        assert voices[0].name == "Custom1"
         assert voices[0].type == "custom"
+        mock_client.custom_voices.list_custom_voices.assert_called_once()
+
+
+def test_list_custom_voices_does_not_use_httpx():
+    """Regression guard: list_custom_voices must not import or call httpx."""
+    import inspect
+
+    from supertone_cli.client import list_custom_voices
+
+    src = inspect.getsource(list_custom_voices)
+    assert "httpx" not in src, "list_custom_voices should no longer use httpx"
+    assert "WORKAROUND(ISSUE-024)" not in src
 
 
 def test_create_speech_with_voice_settings():

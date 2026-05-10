@@ -32,7 +32,7 @@ dependencies = [
     "typer>=0.9,<1.0",
     "rich>=13.0",
     "tomli_w>=1.0",
-    "supertone>=0.2,<0.3",
+    "supertone>=0.2.1,<0.3",
 ]
 
 [project.optional-dependencies]
