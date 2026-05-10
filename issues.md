@@ -1291,6 +1291,53 @@ Revert the squash-merge commit on main.
 
 ---
 
+### ISSUE-028: Remove list_custom_voices httpx workaround once SDK makes description optional
+- Track: quality
+- UI: false
+- Manual: false
+- PRD-Ref: FR-005
+- Priority: P2
+- Estimate: 0.5d
+- Status: done
+- Owner:
+- Branch: issue/ISSUE-028-remove-custom-voices-httpx-workaround
+- GH-Issue: https://github.com/supertone-inc/supertone-cli/issues/51
+- PR: https://github.com/supertone-inc/supertone-cli/pull/52
+- Depends-On: ISSUE-024; upstream supertone SDK release with description optional in custom voice Pydantic model
+
+#### Goal
+Once the upstream `supertone` SDK ships a release that makes the `description` field optional in the custom voice Pydantic response model (resolving the bug tracked by ISSUE-024 and `docs/upstream_bugs.md`), remove the raw httpx workaround in `src/supertone_cli/client.py:list_custom_voices` and revert to using the SDK call. Clean up the workaround tracking artifacts (test, doc, comment marker). The CLI's user-facing surface — including `supertone voices edit --description` — already treats description as optional and requires no changes.
+
+#### Scope (In/Out)
+- In: (1) Replace the raw `httpx.get(...)` workaround in `src/supertone_cli/client.py:list_custom_voices` (currently lines ~317-354) with `client.custom_voices.list_custom_voices()` SDK call. Map response items to `Voice(...)` using existing `_attr` helper. (2) Remove the `WORKAROUND(ISSUE-024)` comment block above `list_custom_voices`. (3) Remove (or fully rewrite) `tests/test_upstream_bugs.py` — the assertions about `WORKAROUND(ISSUE-024)` marker and `0.2` SDK version no longer hold. (4) Mark `docs/upstream_bugs.md` "list_custom_voices" entry as **Resolved** with the fixed SDK version, or remove the section entirely if it leaves the doc empty. (5) Bump the `supertone` minimum version constraint in `pyproject.toml` to the version that includes the fix.
+- Out: Changing CLI command flags, output shape, or user-facing behavior (none required — already optional). Other unrelated SDK upgrade work. Filing the upstream fix itself (handled by the SDK team).
+
+#### Acceptance Criteria (DoD)
+- [ ] Given `src/supertone_cli/client.py:list_custom_voices`, when inspected, then it calls `client.custom_voices.list_custom_voices()` (no `httpx` import or call inside the function) and the `WORKAROUND(ISSUE-024)` comment block is removed.
+- [ ] Given the repo, when grep'd for `WORKAROUND(ISSUE-024)` or `TODO(ISSUE-024)`, then no matches remain.
+- [ ] Given `tests/test_upstream_bugs.py`, when inspected, then it either no longer exists or no longer asserts the workaround marker / SDK 0.2 version.
+- [ ] Given `docs/upstream_bugs.md`, when inspected, then the `list_custom_voices` entry's Status is `Resolved` (with the fixing SDK version) or the section is removed.
+- [ ] Given `pyproject.toml`, when inspected, then the `supertone` dependency's minimum version pins the fixed release.
+- [ ] Given `uv run pytest -q`, when run, then all tests pass with the workaround removed.
+- [ ] Given `supertone voices list-custom` (manual smoke against live API or integration mark), when run, then output matches the prior httpx-based behavior.
+
+#### Implementation Notes
+- **Do not start until** the upstream `supertone` SDK ships a release where the custom voice Pydantic model makes `description` optional (or the API guarantees `description` is always returned). Verify with a 2-line repro before kicking off: `from supertone import Supertone; Supertone(api_key=...).custom_voices.list_custom_voices()` should not raise `pydantic.ValidationError`.
+- The CLI command layer (`src/supertone_cli/commands/voices.py`) and `edit_custom_voice` already treat description as optional (`Optional[str] = None`), so no changes there.
+- After SDK call replacement, ensure exception mapping (`AuthError`/`APIError`) still works; the existing `try/except` structure should be reused.
+- Update `tests/test_voices.py` only if existing assertions break (they shouldn't — `description=None` mock assertion is unaffected by request-side optional-ness).
+
+#### Tests
+- [ ] Unit: `tests/test_client.py` — adjust or add a test that mocks `client.custom_voices.list_custom_voices()` returning items without a `description` field, asserting `Voice(...)` is built correctly.
+- [ ] Existing `tests/test_upstream_bugs.py` removed or fully rewritten — must not assert workaround markers.
+- [ ] `uv run pytest -q` passes.
+
+#### Rollback
+Revert the commit. The httpx workaround returns; pin the `supertone` version back if it was bumped.
+
+---
+
+
 ## Self-Review Summary
 
 ### Requirement Coverage

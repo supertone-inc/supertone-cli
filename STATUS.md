@@ -1,6 +1,6 @@
 # STATUS — Supertone CLI
 
-**Last updated**: 2026-04-17
+**Last updated**: 2026-05-10
 **Current milestone**: Phase 1 — SDK 래퍼 CLI
 
 ---
@@ -9,10 +9,10 @@
 
 | 구분 | 수량 |
 |------|------|
-| **Total** | 27 |
+| **Total** | 28 |
 | P0 (Must) | 10 |
 | P1 (Should) | 11 |
-| P2 (Could) | 6 |
+| P2 (Could) | 7 |
 
 ### By Track
 
@@ -26,7 +26,7 @@
 | Usage | ISSUE-012 | 0.5d |
 | Product (post-MVP) | ISSUE-027 | 1d |
 | Platform | ISSUE-014, 015, 016, 017, 018, 019, 020, 021, 025, 026 | 5.5d |
-| Quality | ISSUE-022, 023, 024 | 1.5d |
+| Quality | ISSUE-022, 023, 024, 028 | 2d |
 
 **Total estimate**: ~21d
 
@@ -82,4 +82,4 @@ These are informational only and do not block implementation.
 | Architecture | v1.0 Complete |
 | Data Model | v1.0 Complete |
 | Test Plan | v1.0 Complete |
-| Issues | 27 issues created |
+| Issues | 28 issues created |
