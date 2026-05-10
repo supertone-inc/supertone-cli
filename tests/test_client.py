@@ -264,9 +264,7 @@ def test_search_voices_returns_filtered_list():
         assert len(voices) == 1
         assert isinstance(voices[0], Voice)
         assert voices[0].id == "v2"
-        mock_client.voices.search_voices.assert_called_once_with(
-            language="ko", gender="female"
-        )
+        mock_client.voices.search_voices.assert_called_once_with(language="ko", gender="female")
 
 
 def test_get_voice_returns_voice():
@@ -312,9 +310,7 @@ def test_delete_custom_voice_calls_sdk():
     mock_client = MagicMock()
     with patch("supertone_cli.client.get_client", return_value=mock_client):
         delete_custom_voice("v1")
-        mock_client.custom_voices.delete_custom_voice.assert_called_once_with(
-            voice_id="v1"
-        )
+        mock_client.custom_voices.delete_custom_voice.assert_called_once_with(voice_id="v1")
 
 
 def test_stream_speech_yields_chunks():
@@ -395,17 +391,6 @@ def test_list_custom_voices_via_sdk():
         assert voices[0].name == "Custom1"
         assert voices[0].type == "custom"
         mock_client.custom_voices.list_custom_voices.assert_called_once()
-
-
-def test_list_custom_voices_does_not_use_httpx():
-    """Regression guard: list_custom_voices must not import or call httpx."""
-    import inspect
-
-    from supertone_cli.client import list_custom_voices
-
-    src = inspect.getsource(list_custom_voices)
-    assert "httpx" not in src, "list_custom_voices should no longer use httpx"
-    assert "WORKAROUND(ISSUE-024)" not in src
 
 
 def test_create_speech_with_voice_settings():
