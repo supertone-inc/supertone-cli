@@ -5,12 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.1] - 2026-05-10
 
 ### Changed
 
 - Bump `supertone` minimum to `>=0.2.1` and revert `list_custom_voices` from the raw httpx workaround back to the SDK call now that the upstream Pydantic model makes `description` optional (resolves ISSUE-024 via ISSUE-028 / PR #52).
 - `voices list-custom --format json` may now include `languages`, `gender`, `age`, and `use_cases` fields when the SDK returns them (previously omitted).
+
+### Fixed
+
+- Repository URLs in `pyproject.toml` corrected to point at `supertone-inc/supertone-cli`.
+- Test stability on Windows CI for `voices clone` and config file permissions.
+- Test import block ordering (blank line between third-party and first-party imports).
 
 ## [0.1.0] - 2026-04-14
 
@@ -43,4 +49,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI pipeline with GitHub Actions (lint + test + coverage gate ≥ 80%, Python 3.12/3.13, ubuntu/macOS)
 - MIT license
 
+[0.1.1]: https://github.com/supertone-inc/supertone-cli/releases/tag/v0.1.1
 [0.1.0]: https://github.com/supertone-inc/supertone-cli/releases/tag/v0.1.0
