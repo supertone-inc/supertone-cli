@@ -30,6 +30,15 @@ def test_supertonic_rejects_pitch():
         validate_params("supertonic_api_1", pitch=0.5)
 
 
+def test_supertonic_api_3_rejects_pitch():
+    with pytest.raises(InputError):
+        validate_params("supertonic_api_3", pitch=0.5)
+
+
+def test_supertonic_api_3_allows_speed_only():
+    validate_params("supertonic_api_3", speed=1.1)
+
+
 def test_sona2_allows_speed_and_pitch():
     validate_params("sona_speech_2", speed=1.2, pitch=0.5)
 

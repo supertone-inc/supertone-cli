@@ -184,7 +184,7 @@
 | Flag | Type | Default | Notes |
 |------|------|---------|-------|
 | `--voice` | string | `default_voice` from config or required | |
-| `--model` | enum | `sona_speech_2` | `sona_speech_1`, `supertonic_api_1`, `sona_speech_2`, `sona_speech_2_flash` |
+| `--model` | enum | `sona_speech_2` | `sona_speech_1`, `supertonic_api_1`, `supertonic_api_3`, `sona_speech_2`, `sona_speech_2_flash`, `sona_speech_2t` |
 | `--lang` | string | `ko` | Language code |
 | `--style` | string | model default | SDK style parameter |
 | `--output-format` | enum | `wav` | `wav`, `mp3`, `ogg`, `flac`, `aiff` |
@@ -199,7 +199,8 @@
 **Acceptance Criteria**:
 - Given `--model sona_speech_2_flash` and `--similarity` is provided, exit code is 3 and an error message states the parameter is not supported by that model.
 - Given `--model sona_speech_2_flash` and `--text-guidance` is provided, exit code is 3 and an error message states the parameter is not supported by that model.
-- Given `--model supertonic_api_1` and any parameter other than `--speed` is provided (excluding `--voice`, `--lang`, `--output-format`), the unsupported parameter is silently ignored OR an exit-code-3 error is raised. (See Assumption A-4.)
+- Given `--model supertonic_api_1` or `--model supertonic_api_3` and any parameter other than `--speed` is provided (excluding `--voice`, `--lang`, `--output-format`), the unsupported parameter is silently ignored OR an exit-code-3 error is raised. (See Assumption A-4.)
+- Given `--model supertonic_api_3`, the SDK exposes 31 languages (`ar, bg, cs, da, de, el, en, es, et, fi, fr, hi, hr, hu, id, it, ja, ko, lt, lv, nl, pl, pt, ro, ru, sk, sl, sv, tr, uk, vi`); `--lang` is validated against the SDK enum.
 - Given `--stream` and model is not `sona_speech_1`, exit code is 3.
 - Given `--include-phonemes true`, phoneme data is included in the response and written alongside the audio output. (See Assumption A-5 for output format.)
 
@@ -479,7 +480,7 @@ The following are explicitly excluded from Phase 1:
 
 **A-3**: `supertone config get api_key` behavior is not defined regarding masking. This document assumes the full key is returned unmasked since the command is explicit and the user is authenticated at the OS level by the `600` file permission. **Verify with stakeholder — masking may be preferred.**
 
-**A-4**: The PRD states `supertonic_api_1` supports only `--speed` for audio adjustment. The behavior when other audio parameters (`--pitch`, `--similarity`, etc.) are passed with this model is not specified. This document flags this as ambiguous. **Recommend: raise exit code 3 with a clear message listing unsupported parameters for the model.**
+**A-4**: The PRD states `supertonic_api_1` (and `supertonic_api_3`) supports only `--speed` for audio adjustment. The behavior when other audio parameters (`--pitch`, `--similarity`, etc.) are passed with these models is not specified. This document flags this as ambiguous. **Recommend: raise exit code 3 with a clear message listing unsupported parameters for the model.**
 
 **A-5**: The behavior of `--include-phonemes true` regarding output is not specified. The PRD does not state whether phoneme data is printed to stdout, written to a sidecar file, or embedded in the JSON response. **Verify with stakeholder before implementing.**
 

@@ -25,7 +25,7 @@ _HAS_KEY = bool(os.environ.get("SUPERTONE_API_KEY"))
 @pytest.mark.skipif(not _HAS_KEY, reason="SUPERTONE_API_KEY not set")
 def test_voices_list_smoke():
     """Smoke test: voices list returns valid JSON with at least one voice."""
-    result = runner.invoke(app, ["voices", "list", "--json"])
+    result = runner.invoke(app, ["voices", "list", "--format", "json"])
     assert result.exit_code == 0, f"CLI failed: {result.output}"
     data = json.loads(result.output)
     assert isinstance(data, list)

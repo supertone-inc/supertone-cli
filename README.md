@@ -159,7 +159,9 @@ Human-readable output (tables, progress, errors) goes to **stderr**. Machine-rea
 
 ## Supported models
 
-`sona_speech_1`, `sona_speech_2`, `sona_speech_2_flash`, `sona_speech_2t`, `supertonic_api_1`. Parameter compatibility varies by model; the CLI validates this and returns exit code `3` on mismatches.
+`sona_speech_1`, `sona_speech_2`, `sona_speech_2_flash`, `sona_speech_2t`, `supertonic_api_1`, `supertonic_api_3`. Parameter compatibility varies by model; the CLI validates this and returns exit code `3` on mismatches.
+
+`supertonic_api_3` supports 31 languages and accepts only `--speed` for voice settings (other voice settings are rejected with exit code `3`).
 
 Streaming (`--stream`) currently requires `sona_speech_1`.
 
