@@ -40,7 +40,7 @@ This is the only persistent data structure. It is a flat TOML file with no secti
 |-----|------|----------|---------|------------|-------------|
 | `api_key` | string | No (but needed for auth commands) | None | Non-empty string; must not be whitespace-only | Supertone API key |
 | `default_voice` | string | No | None | Non-empty string if present | Default voice ID for TTS commands |
-| `default_model` | string | No | `"sona_speech_2"` (built-in fallback) | One of: `sona_speech_1`, `supertonic_api_1`, `sona_speech_2`, `sona_speech_2_flash` | Default TTS model |
+| `default_model` | string | No | `"sona_speech_2"` (built-in fallback) | One of: `sona_speech_1`, `supertonic_api_1`, `supertonic_api_3`, `sona_speech_2`, `sona_speech_2_flash`, `sona_speech_2t` | Default TTS model |
 | `default_lang` | string | No | `"ko"` (built-in fallback) | Non-empty string if present | Default language code |
 
 **Constraints**:
@@ -263,7 +263,14 @@ These are fixed value sets used across multiple modules.
 ### Model Names
 
 ```python
-VALID_MODELS = {"sona_speech_1", "supertonic_api_1", "sona_speech_2", "sona_speech_2_flash"}
+VALID_MODELS = {
+    "sona_speech_1",
+    "supertonic_api_1",
+    "supertonic_api_3",
+    "sona_speech_2",
+    "sona_speech_2_flash",
+    "sona_speech_2t",
+}
 ```
 
 Used for validation in `commands/tts.py` and `config set default_model`.

@@ -21,6 +21,7 @@ tts_app = typer.Typer(
 VALID_MODELS = {
     "sona_speech_1",
     "supertonic_api_1",
+    "supertonic_api_3",
     "sona_speech_2",
     "sona_speech_2_flash",
     "sona_speech_2t",
@@ -31,6 +32,7 @@ VALID_OUTPUT_FORMATS = {"wav", "mp3"}
 # Model-parameter compatibility matrix
 _FLASH_DISALLOWED = {"similarity", "text_guidance"}
 _SUPERTONIC_ALLOWED = {"speed"}
+_SUPERTONIC_MODELS = {"supertonic_api_1", "supertonic_api_3"}
 _STREAM_MODELS = {"sona_speech_1"}
 
 
@@ -48,13 +50,11 @@ def validate_params(model: str, **kwargs: object) -> None:
         if bad:
             raise InputError(f"Not supported by {model}: {', '.join(sorted(bad))}")
 
-    if model == "supertonic_api_1":
+    if model in _SUPERTONIC_MODELS:
         bad = set(params) - _SUPERTONIC_ALLOWED - {"stream"}
         if bad:
             raise InputError(
-                f"Not supported by {model}: "
-                f"{', '.join(sorted(bad))}. "
-                f"Only speed is supported."
+                f"Not supported by {model}: {', '.join(sorted(bad))}. Only speed is supported."
             )
 
     if params.get("stream") and model not in _STREAM_MODELS:
@@ -85,8 +85,7 @@ def _resolve_text(
 
     if not sources and not stdin_has_data:
         raise InputError(
-            "No input provided. Pass text as argument, "
-            "use --input <file>, or pipe via stdin."
+            "No input provided. Pass text as argument, use --input <file>, or pipe via stdin."
         )
 
     if text:
@@ -271,9 +270,7 @@ def _run_tts(  # noqa: PLR0913
         stream=stream if stream else None,
     )
 
-    voice_settings = _build_settings_kwargs(
-        speed, pitch, pitch_variance, similarity, text_guidance
-    )
+    voice_settings = _build_settings_kwargs(speed, pitch, pitch_variance, similarity, text_guidance)
 
     # Batch mode: directory input + outdir
     if _is_batch_input(input) and outdir:
@@ -291,9 +288,7 @@ def _run_tts(  # noqa: PLR0913
         return
 
     if format == "json" and output == "-":
-        raise InputError(
-            "Cannot use --format json with --output -: both write to stdout."
-        )
+        raise InputError("Cannot use --format json with --output -: both write to stdout.")
 
     resolved_text = _resolve_text(text, input)
 
@@ -350,9 +345,7 @@ def register_tts_command(app: typer.Typer) -> None:
     @app.command("tts")
     def tts_cmd(  # noqa: PLR0913
         text: Optional[str] = typer.Argument(None, help="Text to synthesize."),
-        input: Optional[str] = typer.Option(
-            None, "--input", "-i", help="Path to text file."
-        ),
+        input: Optional[str] = typer.Option(None, "--input", "-i", help="Path to text file."),
         output: Optional[str] = typer.Option(
             None,
             "--output",
@@ -394,9 +387,7 @@ def register_tts_command(app: typer.Typer) -> None:
         pitch_variance: Optional[float] = typer.Option(
             None, "--pitch-variance", help="Pitch variance."
         ),
-        similarity: Optional[float] = typer.Option(
-            None, "--similarity", help="Voice similarity."
-        ),
+        similarity: Optional[float] = typer.Option(None, "--similarity", help="Voice similarity."),
         text_guidance: Optional[float] = typer.Option(
             None, "--text-guidance", help="Text guidance."
         ),
@@ -429,12 +420,8 @@ def register_predict_command(app: typer.Typer) -> None:
 
     @app.command("tts-predict")
     def predict_cmd(
-        text: Optional[str] = typer.Argument(
-            None, help="Text to predict duration for."
-        ),
-        input: Optional[str] = typer.Option(
-            None, "--input", "-i", help="Path to text file."
-        ),
+        text: Optional[str] = typer.Argument(None, help="Text to predict duration for."),
+        input: Optional[str] = typer.Option(None, "--input", "-i", help="Path to text file."),
         voice: Optional[str] = typer.Option(None, "--voice", "-v", help="Voice ID."),
         model: Optional[str] = typer.Option(None, "--model", "-m", help="TTS model."),
         lang: Optional[str] = typer.Option(None, "--lang", "-l", help="Language code."),

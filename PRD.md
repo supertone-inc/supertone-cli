@@ -100,8 +100,8 @@ Phase 1은 Supertone Python SDK를 래핑하는 Unix 파이프 친화적 CLI를 
 | 옵션 | 설명 | 기본값 |
 |------|------|--------|
 | `--voice` | 보이스 ID | config 기본값 또는 필수 |
-| `--model` | 모델 선택 (sona_speech_1, supertonic_api_1, sona_speech_2, sona_speech_2_flash) | sona_speech_2 |
-| `--lang` | 언어 코드 (ko, en, ja 등 23개) | ko |
+| `--model` | 모델 선택 (sona_speech_1, supertonic_api_1, supertonic_api_3, sona_speech_2, sona_speech_2_flash, sona_speech_2t) | sona_speech_2 |
+| `--lang` | 언어 코드 (ko, en, ja 등 31개; `supertonic_api_3` 사용 시 확장 언어 지원) | ko |
 | `--style` | 음성 스타일 | 모델 기본값 |
 | `--output-format` | 출력 오디오 포맷 (wav, mp3, ogg, flac, aiff) | wav |
 | `--speed` | 말하기 속도 | 모델 기본값 |
