@@ -142,6 +142,33 @@ def test_voices_get_format_json():
     assert data["name"] == "Test"
 
 
+def test_voices_get_custom_voice_human_readable():
+    """voices get on a custom voice exits 0 and shows the custom type."""
+    voice = Voice(
+        id="c1",
+        name="My Clone",
+        type="custom",
+        languages=["ko"],
+        gender="female",
+        age="young",
+        use_cases=[],
+    )
+    with patch("supertone_cli.client.get_voice", return_value=voice):
+        result = runner.invoke(app, ["voices", "get", "c1"])
+    assert result.exit_code == 0
+    assert "custom" in result.output
+
+
+def test_voices_get_custom_voice_format_json():
+    """voices get --format json on a custom voice reports type custom."""
+    voice = Voice(id="c1", name="My Clone", type="custom", languages=["ko"])
+    with patch("supertone_cli.client.get_voice", return_value=voice):
+        result = runner.invoke(app, ["voices", "get", "c1", "--format", "json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["type"] == "custom"
+
+
 # ── voices edit ──────────────────────────────────────────────────────
 
 

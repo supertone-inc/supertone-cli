@@ -264,7 +264,9 @@ def test_search_voices_returns_filtered_list():
         assert len(voices) == 1
         assert isinstance(voices[0], Voice)
         assert voices[0].id == "v2"
-        mock_client.voices.search_voices.assert_called_once_with(language="ko", gender="female")
+        mock_client.voices.search_voices.assert_called_once_with(
+            language="ko", gender="female"
+        )
 
 
 def test_get_voice_returns_voice():
@@ -286,6 +288,92 @@ def test_get_voice_returns_voice():
         assert isinstance(voice, Voice)
         assert voice.id == "v1"
         assert voice.name == "Test"
+
+
+class _StatusError(Exception):
+    """Simple SDK-like error carrying a status_code (mirrors how the
+    client detects 404/401 via getattr(exc, 'status_code', None))."""
+
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def test_get_voice_preset_does_not_call_custom():
+    """When the preset endpoint succeeds, the custom endpoint is NOT called."""
+    from supertone_cli.client import get_voice
+    from supertone_cli.models import Voice
+
+    mock_client = MagicMock()
+    mock_v = MagicMock()
+    mock_v.voice_id = "v1"
+    mock_v.name = "Preset"
+    mock_v.language = "ko"
+    mock_v.gender = "male"
+    mock_v.age = "adult"
+    mock_v.use_cases = ["audiobook"]
+    mock_client.voices.get_voice.return_value = mock_v
+
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        voice = get_voice("v1")
+        assert isinstance(voice, Voice)
+        assert voice.type == "preset"
+        mock_client.custom_voices.get_custom_voice.assert_not_called()
+
+
+def test_get_voice_falls_back_to_custom_on_404():
+    """When the preset endpoint 404s, fall back to the custom endpoint."""
+    from supertone_cli.client import get_voice
+    from supertone_cli.models import Voice
+
+    mock_client = MagicMock()
+    mock_client.voices.get_voice.side_effect = _StatusError("not found", 404)
+
+    mock_cv = MagicMock()
+    mock_cv.voice_id = "c1"
+    mock_cv.name = "Cloned"
+    mock_cv.language = "ko"
+    mock_cv.gender = "female"
+    mock_cv.age = "young"
+    mock_cv.use_cases = []
+    mock_client.custom_voices.get_custom_voice.return_value = mock_cv
+
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        voice = get_voice("c1")
+        assert isinstance(voice, Voice)
+        assert voice.type == "custom"
+        assert voice.id == "c1"
+        mock_client.custom_voices.get_custom_voice.assert_called_once_with(
+            voice_id="c1"
+        )
+
+
+def test_get_voice_both_miss_raises_api_error():
+    """When both preset and custom endpoints 404, raise APIError."""
+    from supertone_cli.client import get_voice
+
+    mock_client = MagicMock()
+    mock_client.voices.get_voice.side_effect = _StatusError("not found", 404)
+    mock_client.custom_voices.get_custom_voice.side_effect = _StatusError(
+        "not found", 404
+    )
+
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        with pytest.raises(APIError):
+            get_voice("missing")
+
+
+def test_get_voice_auth_error_does_not_fall_back():
+    """An auth error on the preset lookup surfaces as AuthError; no fallback."""
+    from supertone_cli.client import get_voice
+
+    mock_client = MagicMock()
+    mock_client.voices.get_voice.side_effect = _StatusError("unauthorized", 401)
+
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        with pytest.raises(AuthError):
+            get_voice("v1")
+        mock_client.custom_voices.get_custom_voice.assert_not_called()
 
 
 def test_edit_custom_voice_returns_result():
@@ -310,7 +398,9 @@ def test_delete_custom_voice_calls_sdk():
     mock_client = MagicMock()
     with patch("supertone_cli.client.get_client", return_value=mock_client):
         delete_custom_voice("v1")
-        mock_client.custom_voices.delete_custom_voice.assert_called_once_with(voice_id="v1")
+        mock_client.custom_voices.delete_custom_voice.assert_called_once_with(
+            voice_id="v1"
+        )
 
 
 def test_stream_speech_yields_chunks():

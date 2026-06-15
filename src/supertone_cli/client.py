@@ -389,8 +389,32 @@ def clone_voice(name: str, sample_path: str) -> CloneResult:
         raise APIError(str(exc)) from exc
 
 
+def _is_not_found_error(exc: Exception) -> bool:
+    """Detect a NOT-FOUND (404) error from an SDK exception.
+
+    Checked narrowly so that auth/network errors do NOT trigger the
+    custom-voice fallback. Mirrors the lazy-import pattern in
+    ``_is_auth_error`` -- the SDK is imported only when needed.
+    """
+    try:
+        from supertone.errors import NotFoundErrorResponse
+
+        if isinstance(exc, NotFoundErrorResponse):
+            return True
+    except ImportError:
+        pass
+
+    return getattr(exc, "status_code", None) == 404
+
+
 def get_voice(voice_id: str) -> Voice:
-    """Get details of a specific voice."""
+    """Get details of a specific voice.
+
+    Tries the preset endpoint first (``/v1/voices/{id}``). If that returns
+    a 404, falls back to the custom-voice endpoint (``/v1/custom-voices/{id}``)
+    so cloned voices resolve too. Auth/network errors propagate without a
+    spurious fallback call.
+    """
     client = get_client()
     try:
         v = client.voices.get_voice(voice_id=voice_id)
@@ -408,7 +432,18 @@ def get_voice(voice_id: str) -> Voice:
     except Exception as exc:
         if _is_auth_error(exc):
             raise AuthError(str(exc)) from exc
-        raise APIError(str(exc)) from exc
+        if not _is_not_found_error(exc):
+            raise APIError(str(exc)) from exc
+        # Preset 404 -> fall back to the custom-voice endpoint.
+        try:
+            v = client.custom_voices.get_custom_voice(voice_id=voice_id)
+            return _build_voice(v, voice_type="custom")
+        except (AuthError, APIError):
+            raise
+        except Exception as inner:
+            if _is_auth_error(inner):
+                raise AuthError(str(inner)) from inner
+            raise APIError(f"Voice not found: {voice_id}") from inner
 
 
 def edit_custom_voice(
