@@ -26,3 +26,26 @@ counter, and an Observed-In list.
 - Prevention: When branching on a format marker that a spec allows in multiple
   forms, normalize case (or match both) before testing. Low impact when inputs
   are constrained, but cheap to guard at write time.
+
+## [RL-003] Test mocks expose attributes the real SDK response does not
+
+- Category: Testing
+- Frequency: 1
+- Observed-In: ISSUE-030 (custom-voice fallback tests build `MagicMock`s with
+  `gender`/`age`/`language`/`use_cases`, but the real `GetCustomVoiceResponse`
+  only carries `voice_id`/`name`/`description`; the test would not catch a
+  regression that assumes a non-existent required attribute)
+- Prevention: When mocking an SDK response, mirror the real model's actual field
+  set (check `model_fields`). Prefer constructing the real response object or a
+  mock limited to the documented fields, so the test fails if production code
+  starts depending on attributes the endpoint never returns.
+
+## [RL-004] New branch in a helper is only exercised via one detection path
+
+- Category: Testing
+- Frequency: 1
+- Observed-In: ISSUE-030 (`_is_not_found_error` has a typed-isinstance branch
+  and a `status_code == 404` branch; tests only cover the latter)
+- Prevention: When a helper has multiple detection branches (typed exception vs
+  duck-typed attribute), add a direct unit test per branch rather than relying
+  on one integration path to cover all of them.

@@ -106,3 +106,93 @@ None. No Critical/High findings; the Low items are intentionally not gold-plated
 
 - Optional: accept lowercase `t` separator and/or validate input format in the
   CLI layer for clearer error messages than a server 400.
+
+## ISSUE-030 — voices get custom fallback
+
+### Verdict: APPROVE
+
+The fix is correct, minimal, and conforms to project patterns. All ACs are met,
+tests pass (163 passed, 1 skipped), ruff is clean. No fixes required.
+
+### Code Review findings
+
+- (Correct) `_is_not_found_error` follows the established lazy-import pattern of
+  `_is_auth_error` (no top-level `import supertone`), preserving the startup
+  latency contract from architecture.md (client.py is the only SDK-importing
+  module). Verified no module-level SDK import was added.
+- (Correct) Ordering in `get_voice` is sound: `_is_auth_error` (401/403) is
+  checked before `_is_not_found_error` (404), so auth errors raise `AuthError`
+  and never trigger the custom-voice fallback. Confirmed the SDK base
+  `SupertoneError` always sets `status_code` from the HTTP response, so the
+  typed-isinstance check and the `status_code == 404` check are both valid; the
+  typed check is harmless belt-and-suspenders.
+- (Correct) Network/transport errors have no `status_code` and are not
+  `NotFoundErrorResponse`, so `_is_not_found_error` returns False and they
+  propagate as `APIError` with no spurious second call. Matches AC.
+- (Correct) Preset success path is byte-for-byte unchanged.
+- (Correct) The inner fallback re-checks `_is_auth_error(inner)` so a custom
+  endpoint that itself returns 401/403 surfaces as `AuthError`, not a misleading
+  "Voice not found". Good defensive handling.
+- (Low — test realism) The real `GetCustomVoiceResponse` SDK model exposes only
+  `voice_id`, `name`, `description` — it has NO `gender`/`age`/`language`/
+  `use_cases`. The fallback handles this gracefully because `_build_voice` reads
+  via `_attr` with safe defaults (gender/age -> None, languages/use_cases ->
+  []), so no crash. However, the new tests build `MagicMock`s with all of those
+  attributes populated, which does not reflect the real sparse response. The
+  tests still pass and exercise the branch, but they would not catch a future
+  regression where `_build_voice` assumes a required attribute. Non-blocking;
+  consider asserting the realistic sparse shape (e.g. `gender is None`).
+- (Low — coverage gap) Tests cover the generic `status_code == 404` detection
+  path but never the typed `isinstance(exc, NotFoundErrorResponse)` branch of
+  `_is_not_found_error`. The branch is trivial and the SDK guarantees
+  `status_code`, so impact is minimal; a direct unit test of
+  `_is_not_found_error` with a constructed `NotFoundErrorResponse` would close
+  the gap.
+
+### Security Findings
+
+- No new injection, secret-exposure, deserialization, or access-control issues.
+  No shell execution; `voice_id` flows only as a keyword arg to the SDK.
+- (Informational) Both `APIError(str(exc))` and the literal
+  `APIError(f"Voice not found: {voice_id}")` rely on the existing top-level
+  handler's `sanitize_message` for API-key stripping, consistent with all other
+  branches in client.py. No regression vs existing code. The `voice_id` is
+  user-supplied but contains no secret. Severity: none.
+
+### AC verification
+
+- cloned id -> Type: custom, exit 0: covered (test_get_voice_falls_back_to_custom_on_404,
+  test_voices_get_custom_voice_human_readable).
+- preset id unchanged (Type: preset), no custom call: covered
+  (test_get_voice_preset_does_not_call_custom).
+- neither found -> APIError (exit 1): covered (test_get_voice_both_miss_raises_api_error).
+- --format json on custom -> type "custom": covered
+  (test_voices_get_custom_voice_format_json).
+- auth error -> no fallback, AuthError: covered
+  (test_get_voice_auth_error_does_not_fall_back).
+
+### Self-review
+
+- Severity re-assessment: no finding rises above Low; no exploit path exists.
+- False-positive check: the preset path uses inline `Voice(...)` while the
+  fallback uses `_build_voice` — this duplication is pre-existing and unchanged
+  by this PR, so not flagged as a new issue.
+- Blind-spot scan: checked injection, secrets, network-error misclassification,
+  ordering — all clean.
+- Confidence: High.
+
+### Fixes applied during review
+
+None. No Critical/High findings.
+
+### Tests / Lint
+
+- `uv run pytest -q`: 163 passed, 1 skipped.
+- `uv run ruff check .`: All checks passed.
+
+### Follow-ups (non-blocking)
+
+- Add a unit test for `_is_not_found_error` covering the typed
+  `NotFoundErrorResponse` branch.
+- Make the custom-fallback tests use a realistic sparse response shape
+  (voice_id/name/description only) and assert defaulted fields.
