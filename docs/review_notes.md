@@ -36,3 +36,73 @@
 ## Follow-ups
 - After 1–2 releases, drop one of the duplicate "no httpx in `list_custom_voices`" source-inspection tests.
 - Consider a project policy: cosmetic reformat-only hunks land in their own commit, not mixed with logic changes.
+
+## ISSUE-029 — usage analytics ISO datetime
+
+Bug-fix PR adding `_to_iso_datetime(value, *, end)` in `src/supertone_cli/client.py`
+and applying it to `start_time`/`end_time` in `get_usage_analytics` only.
+
+### Verdict: APPROVE
+
+Scope is minimal and matches the issue exactly. `get_voice_usage` is untouched
+(0 references in the client diff). The lazy `supertone` import inside
+`get_usage_analytics` is preserved; `_to_iso_datetime` is a pure string helper
+that imports nothing, so startup latency (NFR-002) is unaffected.
+
+### Code Review findings
+
+- AC met: date-only start -> `...T00:00:00Z`; date-only end -> `...T23:59:59Z`;
+  a value already containing `T` is passed through unchanged. Confirmed by
+  `client.py:472-482, 497-498`.
+- Tests assert SDK kwargs via a mocked `client.usage.get_usage` (start-of-day,
+  end-of-day, and pass-through cases) and a CLI test exits 0. Test code reviewed
+  with the same rigor; the mock shape (`data` -> bucket -> `results`) matches what
+  `get_usage_analytics` parses, so the green is meaningful, not a false positive.
+- [Low] Lowercase `t` detection gap: the membership test `"T" in value` only
+  matches uppercase `T`. ISO-8601 permits a lowercase `t` separator. A value like
+  `2026-06-01t08:30:00Z` would be mis-treated as date-only and mangled into
+  `...t08:30:00ZT00:00:00Z`. Not exploitable and not produced by the documented
+  `YYYY-MM-DD` CLI input; left as-is to avoid gold-plating. Fix if ever needed:
+  `if "T" in value or "t" in value`.
+- [Low] No validation of empty/malformed input: `""` becomes `"T00:00:00Z"` and
+  would yield a server 400. This is no worse than pre-fix behavior and no upstream
+  validation existed; out of scope for this PR.
+- [Info] The `Z` (UTC) assumption is hardcoded. Acceptable: the CLI documents
+  plain `YYYY-MM-DD` and the endpoint accepts UTC; documenting timezone behavior
+  in `--help` would be a nice future touch, not a blocker.
+
+### Security Findings
+
+- No new secrets, credentials, or API keys introduced.
+- No injection surface: helper does pure string concatenation of values that are
+  later sent as SDK kwargs over HTTPS (no shell, no SQL, no template).
+- Error handling unchanged: existing `AuthError`/`APIError` mapping in
+  `get_usage_analytics` is preserved; the helper raises nothing new.
+- No XSS / deserialization / CORS surface (CLI, no web output).
+- Overall: no security findings at any severity.
+
+### Self-review
+
+- Severity re-assessment: only two Low findings; neither has an exploit path or
+  data-loss path, so Low is justified (not politics).
+- False-positive check: verified the pass-through branch and mock shape against
+  the real parsing code; confirmed `get_voice_usage` diff is empty.
+- Blind-spot scan: re-read for injection/secrets/error-handling/auth — none apply
+  to a pure string helper on a CLI.
+- AC verification: all three transformation rules + `get_voice_usage` untouched +
+  test expectations are satisfied.
+- Confidence: High.
+
+### Tests / Lint
+
+- `uv run pytest -q`: 157 passed, 1 skipped.
+- `uv run ruff check .`: All checks passed.
+
+### Fixes applied during review
+
+None. No Critical/High findings; the Low items are intentionally not gold-plated.
+
+### Follow-ups (non-blocking)
+
+- Optional: accept lowercase `t` separator and/or validate input format in the
+  CLI layer for clearer error messages than a server 400.

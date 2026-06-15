@@ -469,6 +469,19 @@ def get_usage() -> Usage:
         raise APIError(str(exc)) from exc
 
 
+def _to_iso_datetime(value: str, *, end: bool) -> str:
+    """Normalise a date or datetime string to a full ISO-8601 datetime.
+
+    The ``/v1/usage`` endpoint requires a full ISO-8601 datetime; a plain
+    ``YYYY-MM-DD`` triggers a server 400. A date-only value is expanded to
+    the start of the day (``end=False``) or the end of the day (``end=True``).
+    A value that already contains a ``T`` (full datetime) is returned as-is.
+    """
+    if "T" in value:
+        return value
+    return f"{value}T23:59:59Z" if end else f"{value}T00:00:00Z"
+
+
 def get_usage_analytics(
     start_time: str,
     end_time: str,
@@ -481,8 +494,8 @@ def get_usage_analytics(
 
         bw = BucketWidth(bucket_width)
         response = client.usage.get_usage(
-            start_time=start_time,
-            end_time=end_time,
+            start_time=_to_iso_datetime(start_time, end=False),
+            end_time=_to_iso_datetime(end_time, end=True),
             bucket_width=bw,
         )
         results = []

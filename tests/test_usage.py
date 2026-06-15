@@ -1,7 +1,7 @@
 """Tests for usage commands."""
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
@@ -116,6 +116,75 @@ def test_usage_analytics_empty():
         )
     assert result.exit_code == 0
     assert "No usage data" in result.output
+
+
+# ── usage analytics date serialization (ISSUE-029) ───────────────────
+
+
+def _build_analytics_mock_client():
+    """Build a MagicMock client whose get_usage returns a parseable shape."""
+    mock_client = MagicMock()
+    mock_bucket = MagicMock()
+    mock_bucket.starting_at = "2026-06-01"
+    mock_bucket.ending_at = "2026-06-02"
+    mock_result = MagicMock()
+    mock_result.minutes_used = 5.5
+    mock_result.voice_id = "v1"
+    mock_result.voice_name = "Voice1"
+    mock_result.model = "sona_speech_2"
+    mock_bucket.results = [mock_result]
+    mock_response = MagicMock()
+    mock_response.data = [mock_bucket]
+    mock_client.usage.get_usage.return_value = mock_response
+    return mock_client
+
+
+def test_analytics_date_only_start_converts_to_iso():
+    """A date-only start is forwarded to the SDK as start-of-day ISO datetime."""
+    from supertone_cli.client import get_usage_analytics
+
+    mock_client = _build_analytics_mock_client()
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        get_usage_analytics("2026-06-01", "2026-06-15", "day")
+
+    kwargs = mock_client.usage.get_usage.call_args.kwargs
+    assert kwargs["start_time"] == "2026-06-01T00:00:00Z"
+
+
+def test_analytics_date_only_end_converts_to_iso():
+    """A date-only end is forwarded to the SDK as end-of-day ISO datetime."""
+    from supertone_cli.client import get_usage_analytics
+
+    mock_client = _build_analytics_mock_client()
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        get_usage_analytics("2026-06-01", "2026-06-15", "day")
+
+    kwargs = mock_client.usage.get_usage.call_args.kwargs
+    assert kwargs["end_time"] == "2026-06-15T23:59:59Z"
+
+
+def test_analytics_full_datetime_passed_through_unchanged():
+    """A value already containing a 'T' is forwarded unchanged."""
+    from supertone_cli.client import get_usage_analytics
+
+    mock_client = _build_analytics_mock_client()
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        get_usage_analytics("2026-06-01T08:30:00Z", "2026-06-15T19:45:00Z", "day")
+
+    kwargs = mock_client.usage.get_usage.call_args.kwargs
+    assert kwargs["start_time"] == "2026-06-01T08:30:00Z"
+    assert kwargs["end_time"] == "2026-06-15T19:45:00Z"
+
+
+def test_usage_analytics_date_range_cli_exits_zero():
+    """CLI analytics with plain dates exits 0 with the SDK mocked."""
+    mock_client = _build_analytics_mock_client()
+    with patch("supertone_cli.client.get_client", return_value=mock_client):
+        result = runner.invoke(
+            app,
+            ["usage", "analytics", "--start", "2026-06-01", "--end", "2026-06-15"],
+        )
+    assert result.exit_code == 0
 
 
 # ── usage voices ─────────────────────────────────────────────────────
