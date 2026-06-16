@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-06-16
+
+### Fixed
+
+- `usage analytics`: the CLI now converts `--start`/`--end` (`YYYY-MM-DD`) to full ISO-8601 datetimes before calling `/v1/usage` (start → `T00:00:00Z`, end → `T23:59:59Z`; values already containing a time component pass through). Previously the plain date produced a server 400 that surfaced as a confusing SDK `ResponseValidationError`. `usage voices` is unaffected. (ISSUE-029, PR #56)
+- `voices get <id>`: now falls back to the custom-voice endpoint when the preset lookup returns 404, so cloned/custom voices can be retrieved (matching `voices edit`/`delete`). Auth and network errors still propagate without a spurious second call. (ISSUE-030, PR #58)
+
 ## [0.2.0] - 2026-05-21
 
 ### Added
