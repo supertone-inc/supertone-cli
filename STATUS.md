@@ -1,6 +1,6 @@
 # STATUS — Supertone CLI
 
-**Last updated**: 2026-05-10
+**Last updated**: 2026-06-15
 **Current milestone**: Phase 1 — SDK 래퍼 CLI
 
 ---
@@ -9,9 +9,9 @@
 
 | 구분 | 수량 |
 |------|------|
-| **Total** | 28 |
+| **Total** | 30 |
 | P0 (Must) | 10 |
-| P1 (Should) | 11 |
+| P1 (Should) | 13 |
 | P2 (Could) | 7 |
 
 ### By Track
@@ -24,11 +24,11 @@
 | TTS | ISSUE-005, 006, 007, 010, 013 | 5.5d |
 | Voices | ISSUE-008, 009, 011 | 2d |
 | Usage | ISSUE-012 | 0.5d |
-| Product (post-MVP) | ISSUE-027 | 1d |
+| Product (post-MVP) | ISSUE-027, 030 | 1.5d |
 | Platform | ISSUE-014, 015, 016, 017, 018, 019, 020, 021, 025, 026 | 5.5d |
-| Quality | ISSUE-022, 023, 024, 028 | 2d |
+| Quality | ISSUE-022, 023, 024, 028, 029 | 2.5d |
 
-**Total estimate**: ~21d
+**Total estimate**: ~22d
 
 ---
 
@@ -44,6 +44,11 @@
 ---
 
 ## Next Issues to Implement
+
+1. ~~**ISSUE-029** (P1, bug) — Fix `usage analytics` date serialization~~ — shipped (PR #56)
+2. ~~**ISSUE-030** (P1, bug) — Fix `voices get` 404 on cloned/custom voices~~ — shipped (PR #58)
+
+### Prior Backlog
 
 1. **ISSUE-016** (P0) — Declare supertone SDK as a required dependency in pyproject.toml
 2. **ISSUE-018** (P0) — Add MIT LICENSE file to repository root
@@ -82,4 +87,4 @@ These are informational only and do not block implementation.
 | Architecture | v1.0 Complete |
 | Data Model | v1.0 Complete |
 | Test Plan | v1.0 Complete |
-| Issues | 28 issues created |
+| Issues | 30 issues created |

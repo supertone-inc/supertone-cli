@@ -1337,6 +1337,94 @@ Revert the commit. The httpx workaround returns; pin the `supertone` version bac
 
 ---
 
+### ISSUE-029: Fix `usage analytics` date serialization — convert YYYY-MM-DD to ISO-8601 datetime
+- Track: quality
+- UI: false
+- Manual: false
+- PRD-Ref: FR-010
+- Priority: P1
+- Estimate: 0.5d
+- Status: done
+- Owner:
+- Branch: issue/ISSUE-029-usage-analytics-date
+- GH-Issue: #55
+- PR: #56
+- Depends-On: ISSUE-027
+
+#### Goal
+`supertone usage analytics --start 2026-06-01 --end 2026-06-15` succeeds and prints usage analytics, matching the `YYYY-MM-DD` format advertised by `--help`. Currently the command fails because the CLI forwards the plain date string unchanged to the `/v1/usage` endpoint's `start_time`/`end_time` query parameters, which require a full ISO-8601 datetime. The plain date produces a server 400 (`invalid time format: parsing time "2026-06-01" as "2006-01-02T15:04:05Z07:00"`), which surfaces to the user as a confusing SDK `ResponseValidationError` (`body.message.status_code Field required`) instead of a clear message.
+
+#### Scope (In/Out)
+- In: In `src/supertone_cli/client.py:get_usage_analytics`, normalize `start_time`/`end_time` to ISO-8601 datetime before the SDK call (`get_usage`): a date with no time component → start gets `T00:00:00Z`, end gets `T23:59:59Z`; values that already contain a `T` (full datetime) pass through unchanged. Keep `--help` text as `YYYY-MM-DD` (the CLI absorbs the conversion) and optionally note that ISO datetimes are also accepted. Add unit tests for the conversion (date-only and already-datetime inputs).
+- Out: SDK-side error-model fix (`statusCode` camelCase vs `status_code` snake_case alias) — this is an upstream `supertone` SDK bug and belongs in `docs/upstream_bugs.md` / the SDK repo, not this issue. `usage voices` (uses `start_date`/`end_date`, a different endpoint that correctly accepts plain dates — no change needed). `usage balance`.
+
+#### Acceptance Criteria (DoD)
+- [ ] Given `supertone usage analytics --start 2026-06-01 --end 2026-06-15`, when the API has data, then analytics rows are printed and exit code is 0 (no `ResponseValidationError`).
+- [ ] Given a date-only `--start`, when forwarded to the SDK, then `get_usage` receives `start_time="2026-06-01T00:00:00Z"`.
+- [ ] Given a date-only `--end`, when forwarded to the SDK, then `get_usage` receives `end_time="2026-06-15T23:59:59Z"`.
+- [ ] Given an `--start`/`--end` that already contains a `T` (full ISO datetime), then it is forwarded unchanged.
+- [ ] Given `uv run pytest -q`, then all tests pass.
+
+#### Implementation Notes
+- Root cause: SDK `usage.get_usage(start_time=, end_time=)` expects ISO-8601 datetime; SDK `usage.get_voice_usage(start_date=, end_date=)` expects plain dates. The CLI passes the same `YYYY-MM-DD` to both, so only `usage analytics` breaks. Confirmed against the live API (plain date → 400; `...T00:00:00Z` → 200).
+- Add a small private helper in `client.py` (e.g. `_to_iso_datetime(value: str, *, end: bool) -> str`) and apply it to both bounds inside `get_usage_analytics` only. Do not touch `get_voice_usage`.
+- The secondary upstream SDK bug (4xx bodies use `statusCode` camelCase but the SDK error unmarshaller requires `status_code`, so all 4xx surface as `ResponseValidationError`) should be recorded in `docs/upstream_bugs.md` and filed against the SDK. The CLI date fix sidesteps it on the happy path by avoiding the 400 entirely.
+
+#### Tests
+- [ ] Unit: `get_usage_analytics` converts date-only start to `...T00:00:00Z` (mock SDK, assert kwargs).
+- [ ] Unit: `get_usage_analytics` converts date-only end to `...T23:59:59Z` (mock SDK, assert kwargs).
+- [ ] Unit: `get_usage_analytics` passes through an already-`T` datetime unchanged (mock SDK).
+- [ ] CLI test: `supertone usage analytics --start <date> --end <date>` exits 0 (mock SDK).
+
+#### Rollback
+Revert the branch. No persistent state.
+
+---
+
+### ISSUE-030: Fix `voices get` 404 on cloned/custom voices — fall back to custom-voice endpoint
+- Track: product
+- UI: false
+- Manual: false
+- PRD-Ref: FR-005, FR-007
+- Priority: P1
+- Estimate: 0.5d
+- Status: done
+- Owner:
+- Branch: issue/ISSUE-030-voices-get-custom-fallback
+- GH-Issue: #57
+- PR: #58
+- Depends-On: ISSUE-027
+
+#### Goal
+`supertone voices get <id>` returns details for a cloned/custom voice instead of a 404. Currently `voices get` only queries the preset endpoint (`client.voices.get_voice` → `/v1/voices/{id}`); cloned voices live at the custom-voice endpoint (`/v1/custom-voices/{id}`), so a user cannot inspect a voice they just cloned even though `edit`/`delete` work on the same ID.
+
+#### Scope (In/Out)
+- In: In `src/supertone_cli/client.py:get_voice`, when the preset lookup returns a not-found (404) error, fall back to `client.custom_voices.get_custom_voice(voice_id=...)` and build a `Voice(..., type="custom")` from the result; if both miss, raise the existing `APIError`/not-found message. The SDK already exposes `custom_voices.get_custom_voice`. Map fields with the existing `_attr`/`_languages`/`_build_voice` helpers. Add unit tests for the fallback (preset hit, custom fallback hit, both miss).
+- Out: A new `--type custom` flag or separate `voices get-custom` command (fallback chosen so users need not know whether an ID is preset or custom). Changes to `voices list/search/edit/delete`. Caching.
+
+#### Acceptance Criteria (DoD)
+- [ ] Given a cloned voice ID, when `supertone voices get <id>` runs, then its details are printed with `Type: custom` and exit code is 0.
+- [ ] Given a preset voice ID, when `supertone voices get <id>` runs, then its details are printed with `Type: preset` (unchanged behavior).
+- [ ] Given an ID that exists in neither, then exit code is 1 with a not-found message on stderr.
+- [ ] Given `--format json` on a custom voice, then a valid JSON object with `type: "custom"` is printed to stdout.
+- [ ] Given `uv run pytest -q`, then all tests pass.
+
+#### Implementation Notes
+- Root cause: `get_voice` is hardcoded to the preset endpoint. Confirmed against the live API (`/v1/voices/{cloned_id}` → 404; `/v1/custom-voices/{cloned_id}` → 200) and against the installed SDK (`custom_voices.get_custom_voice` exists).
+- Detect the 404 narrowly (status_code 404 / not-found) before falling back, so unrelated errors (auth, network) still propagate as `AuthError`/`APIError` without a spurious second call.
+- The MCP server already separates `get_voice`/`get_custom_voice`; the CLI fallback gives equivalent coverage behind a single command.
+
+#### Tests
+- [ ] Unit: `get_voice` returns a preset `Voice` when `voices.get_voice` succeeds (mock SDK; custom endpoint not called).
+- [ ] Unit: `get_voice` falls back to `custom_voices.get_custom_voice` and returns `type="custom"` when the preset lookup 404s (mock SDK).
+- [ ] Unit: `get_voice` raises `APIError` when both endpoints miss (mock SDK).
+- [ ] CLI test: `supertone voices get <id>` on a custom voice exits 0 and shows `Type: custom` (mock SDK).
+
+#### Rollback
+Revert the branch. No persistent state.
+
+---
+
 
 ## Self-Review Summary
 
