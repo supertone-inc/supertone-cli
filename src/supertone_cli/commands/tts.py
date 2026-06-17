@@ -54,7 +54,8 @@ def validate_params(model: str, **kwargs: object) -> None:
         bad = set(params) - _SUPERTONIC_ALLOWED - {"stream"}
         if bad:
             raise InputError(
-                f"Not supported by {model}: {', '.join(sorted(bad))}. Only speed is supported."
+                f"Not supported by {model}: {', '.join(sorted(bad))}. "
+                "Only speed is supported."
             )
 
     if params.get("stream") and model not in _STREAM_MODELS:
@@ -85,7 +86,8 @@ def _resolve_text(
 
     if not sources and not stdin_has_data:
         raise InputError(
-            "No input provided. Pass text as argument, use --input <file>, or pipe via stdin."
+            "No input provided. Pass text as argument, use --input <file>, "
+            "or pipe via stdin."
         )
 
     if text:
@@ -256,7 +258,15 @@ def _run_tts(  # noqa: PLR0913
             "set a default: supertone config set default_voice <id>"
         )
 
-    resolved_model = model or get_default("default_model") or "sona_speech_2"
+    # Streaming only supports sona_speech_1 (keep in sync with _STREAM_MODELS).
+    # When the user hasn't explicitly passed -m/--model, default the streaming
+    # path to sona_speech_1 so it works without an extra flag (config
+    # default_model is bypassed here for the same reason — any other default
+    # would always fail streaming).
+    if stream and model is None:
+        resolved_model = "sona_speech_1"
+    else:
+        resolved_model = model or get_default("default_model") or "sona_speech_2"
     resolved_lang = lang or get_default("default_lang") or "ko"
 
     # Validate model-parameter compatibility
@@ -270,7 +280,9 @@ def _run_tts(  # noqa: PLR0913
         stream=stream if stream else None,
     )
 
-    voice_settings = _build_settings_kwargs(speed, pitch, pitch_variance, similarity, text_guidance)
+    voice_settings = _build_settings_kwargs(
+        speed, pitch, pitch_variance, similarity, text_guidance
+    )
 
     # Batch mode: directory input + outdir
     if _is_batch_input(input) and outdir:
@@ -288,7 +300,9 @@ def _run_tts(  # noqa: PLR0913
         return
 
     if format == "json" and output == "-":
-        raise InputError("Cannot use --format json with --output -: both write to stdout.")
+        raise InputError(
+            "Cannot use --format json with --output -: both write to stdout."
+        )
 
     resolved_text = _resolve_text(text, input)
 
@@ -345,7 +359,9 @@ def register_tts_command(app: typer.Typer) -> None:
     @app.command("tts")
     def tts_cmd(  # noqa: PLR0913
         text: Optional[str] = typer.Argument(None, help="Text to synthesize."),
-        input: Optional[str] = typer.Option(None, "--input", "-i", help="Path to text file."),
+        input: Optional[str] = typer.Option(
+            None, "--input", "-i", help="Path to text file."
+        ),
         output: Optional[str] = typer.Option(
             None,
             "--output",
@@ -387,7 +403,9 @@ def register_tts_command(app: typer.Typer) -> None:
         pitch_variance: Optional[float] = typer.Option(
             None, "--pitch-variance", help="Pitch variance."
         ),
-        similarity: Optional[float] = typer.Option(None, "--similarity", help="Voice similarity."),
+        similarity: Optional[float] = typer.Option(
+            None, "--similarity", help="Voice similarity."
+        ),
         text_guidance: Optional[float] = typer.Option(
             None, "--text-guidance", help="Text guidance."
         ),
@@ -420,8 +438,12 @@ def register_predict_command(app: typer.Typer) -> None:
 
     @app.command("tts-predict")
     def predict_cmd(
-        text: Optional[str] = typer.Argument(None, help="Text to predict duration for."),
-        input: Optional[str] = typer.Option(None, "--input", "-i", help="Path to text file."),
+        text: Optional[str] = typer.Argument(
+            None, help="Text to predict duration for."
+        ),
+        input: Optional[str] = typer.Option(
+            None, "--input", "-i", help="Path to text file."
+        ),
         voice: Optional[str] = typer.Option(None, "--voice", "-v", help="Voice ID."),
         model: Optional[str] = typer.Option(None, "--model", "-m", help="TTS model."),
         lang: Optional[str] = typer.Option(None, "--lang", "-l", help="Language code."),

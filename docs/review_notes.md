@@ -196,3 +196,43 @@ None. No Critical/High findings.
   `NotFoundErrorResponse` branch.
 - Make the custom-fallback tests use a realistic sparse response shape
   (voice_id/name/description only) and assert defaulted fields.
+
+## ISSUE-031 — --stream default model auto-select
+
+PR #60. Reviewed branch `issue/ISSUE-031-stream-default-model`.
+
+### Code Review
+- **Verdict**: Approve. No Critical/High findings.
+- The fix at `src/supertone_cli/commands/tts.py:265-268` is correct and minimal.
+  All four paths verified: stream+no-model → `sona_speech_1`; stream+explicit
+  incompatible → `validate_params` raises `InputError` (tts.py:60-61); stream+
+  explicit `sona_speech_1` → resolves correctly; non-streaming → unchanged.
+- Streaming returns early (tts.py:319) before batch/JSON branches, so no
+  interaction with those paths.
+- Security: no surface. Model is a hardcoded literal or validated against
+  `VALID_MODELS` before reaching the SDK. No secrets, injection, or auth change.
+
+### AC Coverage
+- AC #1 (auto-default): `test_stream_defaults_to_sona_speech_1`.
+- AC #2 (explicit compatible streams): `test_stream_calls_stream_speech`
+  (exit 0) + `test_stream_with_file_save`.
+- AC #3 (explicit incompatible errors): `test_stream_explicit_incompatible_model_still_errors`,
+  now also asserting the error message.
+- Config-default-bypass guarantee: `test_stream_default_overrides_config_default_model`
+  (added during review — the load-bearing path was previously untested, per RL-004).
+
+### Fixes Applied During Review
+- Added `test_stream_default_overrides_config_default_model` covering the
+  config `default_model` bypass (Low finding — the PR's core guarantee).
+- Hardened `test_stream_explicit_incompatible_model_still_errors` to assert the
+  `"Streaming requires sona_speech_1"` message, pinning the validate_params path.
+- Added `keep in sync with _STREAM_MODELS` note to the fix comment (Nit/RL-005):
+  the `"sona_speech_1"` literal duplicates the `_STREAM_MODELS` set (tts.py:36).
+
+### Tests / Lint
+- `pytest -q` (worktree): 166 passed.
+- `uv run ruff check .`: All checks passed.
+
+### Follow-ups (non-blocking)
+- If a second streaming model is ever added, derive the streaming default from
+  `_STREAM_MODELS` rather than the hardcoded literal (latent divergence, RL-005).
