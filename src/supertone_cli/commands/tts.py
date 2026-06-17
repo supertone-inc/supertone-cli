@@ -258,10 +258,11 @@ def _run_tts(  # noqa: PLR0913
             "set a default: supertone config set default_voice <id>"
         )
 
-    # Streaming only supports sona_speech_1. When the user hasn't explicitly
-    # passed -m/--model, default the streaming path to sona_speech_1 so it works
-    # without an extra flag (config default_model is bypassed here for the same
-    # reason — any other default would always fail streaming).
+    # Streaming only supports sona_speech_1 (keep in sync with _STREAM_MODELS).
+    # When the user hasn't explicitly passed -m/--model, default the streaming
+    # path to sona_speech_1 so it works without an extra flag (config
+    # default_model is bypassed here for the same reason — any other default
+    # would always fail streaming).
     if stream and model is None:
         resolved_model = "sona_speech_1"
     else:
