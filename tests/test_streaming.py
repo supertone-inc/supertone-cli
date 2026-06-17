@@ -56,6 +56,35 @@ def test_stream_missing_sounddevice():
     assert isinstance(result.exception, InputError)
 
 
+def test_stream_defaults_to_sona_speech_1():
+    """--stream without -m auto-selects sona_speech_1 (ISSUE-031)."""
+    mock_sd = MagicMock()
+    mock_stream = MagicMock(return_value=iter([b"chunk1"]))
+
+    with (
+        patch("supertone_cli.client.stream_speech", mock_stream),
+        patch.dict("sys.modules", {"sounddevice": mock_sd}),
+    ):
+        result = runner.invoke(
+            app,
+            ["tts", "Hello", "--voice", "v1", "--stream"],
+        )
+    assert result.exit_code == 0
+    assert mock_stream.call_args.kwargs["model"] == "sona_speech_1"
+
+
+def test_stream_explicit_incompatible_model_still_errors():
+    """Explicit -m with a non-streaming model is still rejected."""
+    mock_sd = MagicMock()
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        result = runner.invoke(
+            app,
+            ["tts", "Hello", "--voice", "v1", "--stream", "--model", "sona_speech_2"],
+        )
+    assert result.exit_code != 0
+    assert isinstance(result.exception, InputError)
+
+
 def test_stream_with_file_save(tmp_path):
     """--stream + --output saves to file too."""
     mock_chunks = [b"chunk1", b"chunk2"]
