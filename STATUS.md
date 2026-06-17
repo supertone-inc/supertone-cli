@@ -1,6 +1,6 @@
 # STATUS — Supertone CLI
 
-**Last updated**: 2026-06-15
+**Last updated**: 2026-06-17
 **Current milestone**: Phase 1 — SDK 래퍼 CLI
 
 ---
@@ -9,9 +9,9 @@
 
 | 구분 | 수량 |
 |------|------|
-| **Total** | 30 |
+| **Total** | 31 |
 | P0 (Must) | 10 |
-| P1 (Should) | 13 |
+| P1 (Should) | 14 |
 | P2 (Could) | 7 |
 
 ### By Track
@@ -47,6 +47,7 @@
 
 1. ~~**ISSUE-029** (P1, bug) — Fix `usage analytics` date serialization~~ — shipped (PR #56)
 2. ~~**ISSUE-030** (P1, bug) — Fix `voices get` 404 on cloned/custom voices~~ — shipped (PR #58)
+3. ~~**ISSUE-031** (P1, bug) — Fix `--stream` default model — auto-select `sona_speech_1` when no `-m`~~ — shipped (PR #60)
 
 ### Prior Backlog
 
@@ -87,4 +88,4 @@ These are informational only and do not block implementation.
 | Architecture | v1.0 Complete |
 | Data Model | v1.0 Complete |
 | Test Plan | v1.0 Complete |
-| Issues | 30 issues created |
+| Issues | 31 issues created |

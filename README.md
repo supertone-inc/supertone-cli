@@ -163,7 +163,7 @@ Human-readable output (tables, progress, errors) goes to **stderr**. Machine-rea
 
 `supertonic_api_3` supports 31 languages and accepts only `--speed` for voice settings (other voice settings are rejected with exit code `3`).
 
-Streaming (`--stream`) currently requires `sona_speech_1`.
+Streaming (`--stream`) requires `sona_speech_1`. When no `--model` is given, the CLI selects it automatically, so `--stream` works without an explicit `-m sona_speech_1`.
 
 ## Development
 

@@ -43,9 +43,26 @@ counter, and an Observed-In list.
 ## [RL-004] New branch in a helper is only exercised via one detection path
 
 - Category: Testing
-- Frequency: 1
+- Frequency: 2
 - Observed-In: ISSUE-030 (`_is_not_found_error` has a typed-isinstance branch
-  and a `status_code == 404` branch; tests only cover the latter)
+  and a `status_code == 404` branch; tests only cover the latter); ISSUE-031
+  (the new `if stream and model is None` branch's load-bearing guarantee — that
+  config `default_model` is bypassed for streaming — was exercised by only one
+  path and not directly tested until review added it)
 - Prevention: When a helper has multiple detection branches (typed exception vs
   duck-typed attribute), add a direct unit test per branch rather than relying
   on one integration path to cover all of them.
+
+---
+
+## [RL-005] Auto-selection logic hardcodes a literal that duplicates a capability set
+
+- Category: Architecture
+- Frequency: 1
+- Observed-In: ISSUE-031 (the streaming default hardcodes `"sona_speech_1"` at
+  `tts.py:266`, duplicating the `_STREAM_MODELS` set at `tts.py:36`; if a second
+  streaming model is added, the validator would accept it while the auto-default
+  still forces `sona_speech_1`)
+- Prevention: When defaulting to "the only X that supports Y", derive the value
+  from the capability set the validator already uses, or add a `keep in sync`
+  comment, so the default and the validator cannot diverge as the set grows.
