@@ -4,6 +4,18 @@
 [![PyPI](https://img.shields.io/pypi/v/supertone-cli.svg)](https://pypi.org/project/supertone-cli/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+<!-- ⚠️ SERVICE DISCONTINUATION NOTICE — paste at the very top of the README, right below the title -->
+
+> [!CAUTION]
+> ## ⚠️ Service Discontinuation Notice
+>
+> **The Supertone API will be permanently shut down on August 31, 2026.**
+> After this date, all API requests will stop being served and this package will no longer work.
+>
+> 👉 For the full timeline, refund policy, and details, see the **[End-of-Life Guide](https://docs.supertoneapi.com/en/docs/sunset)**.
+
+
+
 Command-line interface for the [Supertone](https://supertone.ai/) Text-to-Speech API. Generate, stream, batch, and manage voices directly from the terminal.
 
 ## Features
